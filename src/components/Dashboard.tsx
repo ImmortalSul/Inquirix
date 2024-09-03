@@ -1,16 +1,31 @@
 "use client"
 import { trpc } from "@/app/_trpc/client";
 import UploadButton from "./UploadButton";
-import { Ghost, Plus } from "lucide-react";
+import { Ghost, Loader2, MessageSquare, Plus, Trash } from "lucide-react";
 import Skeleton from "react-loading-skeleton"
 import Link from "next/link";
 import { format } from "date-fns";
+import { Button } from "./button";
+import { useState } from "react";
 
 const Dashboard = () => {
 
+    const[currentlyDeletingFile, setCurrentlyDeletingFile] = useState<string | null>(null)
+
+    const utils = trpc.useContext()
 
     const { data: files, isLoading } = trpc.getUserFiles.useQuery();//FUCKING TRPC IS SO COOL
-
+    const { mutate: deleteFile } = trpc.deleteFile.useMutation({
+        onSuccess: () => {
+            utils.getUserFiles.invalidate()
+        },
+        onMutate({id}){
+            setCurrentlyDeletingFile(id)
+        },
+        onSettled() {
+            setCurrentlyDeletingFile(null)
+        }
+    })
     return (
         <main className="mx-auto max-w-7xl md:p-10">
             <div className="mt-8 flex flex-col items-start justify-between gap-4 border-b border-gray-299 pb-5 sm:flex-row sm:items-center sm:gap-0">
@@ -49,10 +64,17 @@ const Dashboard = () => {
                     <div className="px-9 mt-4 grid grid-cols-3 place-items-center py-2 gap-6 text-xs text-zinc-500">
                         <div className="flex items-center gap-2">
                             <Plus className="h-4 w-4"/>
-                            {format(new Date(file.createdAt), "mm/dd/yyyy")} 
+                            {format(new Date(file.createdAt), "dd MMM yyyy")} 
                         </div>
 
+                    <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        mocked
                     </div>
+                    <Button onClick={() => deleteFile({id: file.id})} size='sm' className="w-full" variant='destructive'> {currentlyDeletingFile === file.id ? (<Loader2 className="h-4 w-4 animate-spin" />) : <Trash className="h-4 w-4"/>} </Button>
+
+                    </div>
+                    
                     </li>
                 ))}
             </ul>
